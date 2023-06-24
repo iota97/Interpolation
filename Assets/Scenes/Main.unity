@@ -707,6 +707,8 @@ MonoBehaviour:
   interpolationType: 0
   interpolateTranslation: 0
   t: 0
+  animate: 0
+  speed: 0.5
 --- !u!1 &1844641017
 GameObject:
   m_ObjectHideFlags: 0

@@ -117,6 +117,13 @@ public class Interpolation : MonoBehaviour {
     [Range(0.0f, 1.0f)]
     public float t = 0.0f;
 
+    [Header("Animation settings")]
+    public bool animate = false;
+    [Range(0.0f, 1.0f)]
+    public float speed = 0.5f;
+
+    bool reverseAnim = false;
+
     // https://forum.unity.com/threads/how-to-assign-matrix4x4-to-transform.121966/
     Quaternion ExtractRotation(Matrix4x4 matrix) {
         Vector3 forward;
@@ -151,6 +158,17 @@ public class Interpolation : MonoBehaviour {
     void Update() {
         // just reset using A one in case was broken by a matrix interpolation
         transform.localScale = A.transform.localScale;
+
+        if (animate) {
+            t += (reverseAnim ? -1 : 1)*Time.deltaTime*speed;
+            if (t > 1) {
+                t  = 1;
+                reverseAnim = true;
+            } else if (t < 0) {
+                t = 0;
+                reverseAnim = false;
+            }
+        }
 
         // before rotation, so dual quaternions will just overwrite it
         if (interpolateTranslation)
