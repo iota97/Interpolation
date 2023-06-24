@@ -2,6 +2,100 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+
+class MyQuat {
+    public Vector3 im;
+    public float re;
+
+    public MyQuat(Vector3 i, float r) {
+        im = i; re = r;
+    }
+
+    public static MyQuat operator *(MyQuat A, MyQuat B) {
+        return new MyQuat(A.re*B.im + B.re*A.im + Vector3.Cross(A.im, B.im), A.re*B.re - Vector3.Dot(A.im, B.im));
+    }
+
+    public static MyQuat operator +(MyQuat A, MyQuat B) {
+        return new MyQuat(A.im + B.im, A.re + B.re);
+    }
+
+    public static MyQuat operator -(MyQuat A, MyQuat B) {
+        return new MyQuat(A.im - B.im, A.re - B.re);
+    }
+
+    public static MyQuat operator -(MyQuat A) {
+        return new MyQuat(-A.im, -A.re);
+    }
+
+    public static MyQuat operator /(MyQuat A, float k) {
+        return new MyQuat(A.im/k, A.re/k);
+    }
+
+    public static MyQuat operator *(float k, MyQuat A) {
+        return new MyQuat(A.im*k, A.re*k);
+    }
+
+    public MyQuat congiugated() {
+        return new MyQuat(-im, re);
+    }
+
+    public static MyQuat Lerp(MyQuat A, MyQuat B, float t) {
+        return new MyQuat(Vector3.Lerp(A.im, B.im, t), Mathf.Lerp(A.re, B.re, t));
+    }
+
+    public static float Dot(MyQuat A, MyQuat B) {
+        return A.re*B.re + Vector3.Dot(A.im, B.im);
+    }
+}
+
+class DualQuaternion {
+    public MyQuat p, d;
+
+    public DualQuaternion(MyQuat primal, MyQuat dual) {
+        p = primal;
+        d = dual;
+    }
+
+    public static DualQuaternion FromTranslation(Vector3 t) {
+        return new DualQuaternion(new MyQuat(new Vector3(0, 0, 0), 1), new MyQuat(t/2, 0));
+    }
+
+    public static DualQuaternion FromRotation(Quaternion r) {
+        float angle = 0.0f; 
+        Vector3 axis = Vector3.zero;
+        r.ToAngleAxis(out angle, out axis);
+        return new DualQuaternion(new MyQuat(Mathf.Sin(angle/2*Mathf.Deg2Rad)*axis, Mathf.Cos(angle/2*Mathf.Deg2Rad)), new MyQuat(new Vector3(0, 0, 0), 0));
+    }
+
+    public static DualQuaternion operator *(DualQuaternion A, DualQuaternion B) {
+        return new DualQuaternion(A.p*B.p, A.p*B.d + A.d*B.p);
+    }
+
+    public Vector3 translation() {
+        return 2*(d*p.congiugated()).im;
+    }
+
+    public Quaternion rotation() {
+        return Quaternion.AngleAxis(Mathf.Acos(p.re)*2*Mathf.Rad2Deg, Vector3.Normalize(p.im));
+    }
+
+    public static DualQuaternion Nlerp(DualQuaternion A, DualQuaternion B, float t) {
+        if (MyQuat.Dot(A.p, B.p) < 0) {
+            B.p = -B.p;
+            B.d = -B.d;
+        }
+        MyQuat P = MyQuat.Lerp(A.p, B.p, t);
+        MyQuat D = MyQuat.Lerp(A.d, B.d, t);
+
+        float len = Mathf.Sqrt(MyQuat.Dot(P, P));
+        P = P/len;
+        D = D/len;
+
+        D = D - MyQuat.Dot(P, D)*P;
+        return new DualQuaternion(P, D);
+    }
+}
+
 public class Interpolation : MonoBehaviour {
     public enum InterpolationType {
         QuaternionSlerp,
@@ -109,7 +203,11 @@ public class Interpolation : MonoBehaviour {
                 break;
             
             case InterpolationType.DualQuaternions:
-                // TODO
+                DualQuaternion DualA = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
+                DualQuaternion DualB = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
+                transform.rotation = DualQuaternion.Nlerp(DualA, DualB, t).rotation();
+                if (interpolateTranslation)
+                    transform.position = DualQuaternion.Nlerp(DualA, DualB, t).translation();
                 break;
         }
     }
