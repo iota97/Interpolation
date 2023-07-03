@@ -129,6 +129,7 @@ public class Interpolation : MonoBehaviour {
         AxisAndAngle,
         EulerAngles,
         Matrix,
+        MatrixConverted,
         DualQuaternionsSlerp,
         DualQuaternionsNlerp,
     }
@@ -196,15 +197,17 @@ public class Interpolation : MonoBehaviour {
             transform.position = (1-t)*A.transform.position + t*B.transform.position;
 
         switch(interpolationType) {
-            case InterpolationType.QuaternionSlerp:
+            case InterpolationType.QuaternionSlerp: {
                 transform.rotation = Quaternion.Slerp(A.transform.rotation, B.transform.rotation, t);
                 break;
+            }
 
-            case InterpolationType.QuaternionNlerp:
+            case InterpolationType.QuaternionNlerp: {
                 transform.rotation = Quaternion.Lerp(A.transform.rotation, B.transform.rotation, t);
                 break;
+            }
                 
-            case InterpolationType.AxisAndAngle:
+            case InterpolationType.AxisAndAngle: {
                 // Unity docs inizializes like this, not sure if needed...
                 float angleA, angleB = 0.0f; 
                 Vector3 axisA, axisB = Vector3.zero;
@@ -216,8 +219,9 @@ public class Interpolation : MonoBehaviour {
                 }
                 transform.rotation = Quaternion.AngleAxis(angleA+t*Mathf.DeltaAngle(angleA, angleB), Vector3.Slerp(axisA, axisB, t));
                 break;
+            }
 
-            case InterpolationType.EulerAngles:
+            case InterpolationType.EulerAngles: {
                 Vector3 rotA = ToEulerAngles(A.transform.rotation);
                 Vector3 rotB = ToEulerAngles(B.transform.rotation);
                 float yaw = rotA.y + t*Mathf.DeltaAngle(rotA.y, rotB.y);
@@ -225,8 +229,9 @@ public class Interpolation : MonoBehaviour {
                 float roll = rotA.x + t*Mathf.DeltaAngle(rotA.x, rotB.x);
                 transform.rotation = Quaternion.AngleAxis(roll, Vector3.right)*Quaternion.AngleAxis(pitch, Vector3.forward)*Quaternion.AngleAxis(yaw, Vector3.up);
                 break;
+            }
 
-            case InterpolationType.Matrix:
+            case InterpolationType.Matrix: {
                 Matrix4x4 matrix = new Matrix4x4();
                 Matrix4x4 MatA = A.transform.localToWorldMatrix;
                 Matrix4x4 MatB = B.transform.localToWorldMatrix;
@@ -240,6 +245,7 @@ public class Interpolation : MonoBehaviour {
                 matrix.SetColumn(1, Vector4.Lerp(MatA.GetColumn(1), MatB.GetColumn(1), t));
                 matrix.SetColumn(2, Vector4.Lerp(MatA.GetColumn(2), MatB.GetColumn(2), t));
                 matrix.SetColumn(3, Vector4.Lerp(MatA.GetColumn(3), MatB.GetColumn(3), t));
+
                 if (!interpolateTranslation) {
                     matrix.SetColumn(3, new Vector4(transform.position.x, transform.position.y, transform.position.z, 1.0f));
                 }
@@ -248,22 +254,46 @@ public class Interpolation : MonoBehaviour {
                 mat.SetMatrix("_mat", matrix);
                 mat.SetMatrix("_mat_inv", matrix.inverse);
                 break;
+            }
+
+            case InterpolationType.MatrixConverted: {
+                Matrix4x4 matrix = new Matrix4x4();
+                Matrix4x4 MatA = A.transform.localToWorldMatrix;
+                Matrix4x4 MatB = B.transform.localToWorldMatrix;
+                if (A.transform.parent)
+                    MatA = A.transform.parent.localToWorldMatrix.inverse*A.transform.localToWorldMatrix;
+                if (B.transform.parent)
+                    MatB = B.transform.parent.localToWorldMatrix.inverse*B.transform.localToWorldMatrix;
+
+                // No Mat4 LERP, thx Unity API...
+                matrix.SetColumn(0, Vector4.Lerp(MatA.GetColumn(0), MatB.GetColumn(0), t));
+                matrix.SetColumn(1, Vector4.Lerp(MatA.GetColumn(1), MatB.GetColumn(1), t));
+                matrix.SetColumn(2, Vector4.Lerp(MatA.GetColumn(2), MatB.GetColumn(2), t));
+                matrix.SetColumn(3, Vector4.Lerp(MatA.GetColumn(3), MatB.GetColumn(3), t));
+
+                transform.rotation = matrix.rotation;
+                if (interpolateTranslation)
+                    transform.position = matrix.GetPosition();
+                break;
+            }
             
-            case InterpolationType.DualQuaternionsNlerp:
+            case InterpolationType.DualQuaternionsNlerp: {
                 DualQuaternion DualA = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
                 DualQuaternion DualB = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
                 transform.rotation = DualQuaternion.Nlerp(DualA, DualB, t).rotation();
                 if (interpolateTranslation)
                     transform.position = DualQuaternion.Nlerp(DualA, DualB, t).translation();
                 break;
+            }
             
-            case InterpolationType.DualQuaternionsSlerp:
-                DualQuaternion DualAS = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
-                DualQuaternion DualBS = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
-                transform.rotation = DualQuaternion.Slerp(DualAS, DualBS, t).rotation();
+            case InterpolationType.DualQuaternionsSlerp: {
+                DualQuaternion DualA = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
+                DualQuaternion DualB = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
+                transform.rotation = DualQuaternion.Slerp(DualA, DualB, t).rotation();
                 if (interpolateTranslation)
-                    transform.position = DualQuaternion.Slerp(DualAS, DualBS, t).translation();
+                    transform.position = DualQuaternion.Slerp(DualA, DualB, t).translation();
                 break;
+            }
         }
     }
 }
