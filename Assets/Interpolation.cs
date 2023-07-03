@@ -43,13 +43,6 @@ class MyQuat {
         return new MyQuat(Vector3.Lerp(A.im, B.im, t), Mathf.Lerp(A.re, B.re, t));
     }
 
-    public static MyQuat Slerp(MyQuat A, MyQuat B, float t) {
-        float alpha = Mathf.Acos(MyQuat.Dot(A, B));
-        Vector3 i = A.im * Mathf.Sin(alpha*(1-t))/Mathf.Sin(alpha) + B.im * Mathf.Sin(alpha*t)/Mathf.Sin(alpha);
-        float r = A.re * Mathf.Sin(alpha*(1-t))/Mathf.Sin(alpha) + B.re * Mathf.Sin(alpha*t)/Mathf.Sin(alpha);
-        return new MyQuat(i, r);
-    }
-
     public static float Dot(MyQuat A, MyQuat B) {
         return A.re*B.re + Vector3.Dot(A.im, B.im);
     }
@@ -108,8 +101,17 @@ class DualQuaternion {
             B.d = -B.d;
         }
     
-        MyQuat P = MyQuat.Slerp(A.p, B.p, t);
-        MyQuat D = MyQuat.Slerp(A.d, B.d, t);
+        float alpha = Mathf.Acos(MyQuat.Dot(A.p, B.p));
+        float w0 = Mathf.Sin(alpha*(1-t))/Mathf.Sin(alpha);
+        float w1 = Mathf.Sin(alpha*t)/Mathf.Sin(alpha);
+
+        Vector3 i = A.p.im * w0 + B.p.im * w1;
+        float r = A.p.re * w0 + B.p.re * w1;
+        MyQuat P = new MyQuat(i, r);
+
+        i = A.d.im * w0 + B.d.im * w1;
+        r = A.d.re * w0 + B.d.re * w1;
+        MyQuat D = new MyQuat(i, r);
 
         float len = Mathf.Sqrt(MyQuat.Dot(P, P));
         P = P/len;
@@ -124,7 +126,7 @@ public class Interpolation : MonoBehaviour {
     public enum InterpolationType {
         QuaternionSlerp,
         QuaternionNlerp,
-        AxisAngle,
+        AxisAndAngle,
         EulerAngles,
         Matrix,
         DualQuaternionsSlerp,
@@ -202,7 +204,7 @@ public class Interpolation : MonoBehaviour {
                 transform.rotation = Quaternion.Lerp(A.transform.rotation, B.transform.rotation, t);
                 break;
                 
-            case InterpolationType.AxisAngle:
+            case InterpolationType.AxisAndAngle:
                 // Unity docs inizializes like this, not sure if needed...
                 float angleA, angleB = 0.0f; 
                 Vector3 axisA, axisB = Vector3.zero;
