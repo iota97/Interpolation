@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 705507994}
-  m_IndirectSpecularColor: {r: 0.18028352, g: 0.22571376, b: 0.30692244, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -104,7 +104,7 @@ NavMeshSettings:
   serializedVersion: 2
   m_ObjectHideFlags: 0
   m_BuildSettings:
-    serializedVersion: 2
+    serializedVersion: 3
     agentTypeID: 0
     agentRadius: 0.5
     agentHeight: 2
@@ -117,7 +117,7 @@ NavMeshSettings:
     cellSize: 0.16666667
     manualTileSize: 0
     tileSize: 256
-    accuratePlacement: 0
+    buildHeightMesh: 0
     maxJobWorkers: 0
     preserveTilesOutsideBounds: 0
     debug:
@@ -128,6 +128,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 1458344956}
     m_Modifications:
     - target: {fileID: 219800596591509503, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
@@ -279,6 +280,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: c72b09fce10fb4f499f135da510347d4, type: 2}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
 --- !u!4 &36191548 stripped
 Transform:
@@ -290,6 +294,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 1844641018}
     m_Modifications:
     - target: {fileID: 219800596591509503, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
@@ -441,6 +446,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 9b4b3e5b6abfb37f1b7aed001da5c362, type: 2}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
 --- !u!4 &660244400 stripped
 Transform:
@@ -581,9 +589,17 @@ Camera:
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
+  m_Iso: 200
+  m_ShutterSpeed: 0.005
+  m_Aperture: 16
+  m_FocusDistance: 10
+  m_FocalLength: 50
+  m_BladeCount: 5
+  m_Curvature: {x: 2, y: 11}
+  m_BarrelClipping: 0.25
+  m_Anamorphism: 0
   m_SensorSize: {x: 36, y: 24}
   m_LensShift: {x: 0, y: 0}
-  m_FocalLength: 50
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
@@ -704,10 +720,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   A: {fileID: 1844641017}
   B: {fileID: 1278146745}
-  interpolationType: 0
+  interpolationType: 3
   interpolateTranslation: 0
   t: 0
-  animate: 0
+  animate: 1
   speed: 0.5
 --- !u!1 &1844641017
 GameObject:
@@ -746,6 +762,7 @@ PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
+    serializedVersion: 3
     m_TransformParent: {fileID: 1278146746}
     m_Modifications:
     - target: {fileID: 219800596591509503, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
@@ -897,6 +914,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 2100000, guid: 3d462de84685c16a9b288035b10b6279, type: 2}
     m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ede375fa023cef64cbef944cb32947b5, type: 3}
 --- !u!4 &2032770674 stripped
 Transform:

@@ -43,6 +43,13 @@ class MyQuat {
         return new MyQuat(Vector3.Lerp(A.im, B.im, t), Mathf.Lerp(A.re, B.re, t));
     }
 
+    public static MyQuat Slerp(MyQuat A, MyQuat B, float t) {
+        float alpha = Mathf.Acos(MyQuat.Dot(A, B));
+        Vector3 i = A.im * Mathf.Sin(alpha*(1-t))/Mathf.Sin(alpha) + B.im * Mathf.Sin(alpha*t)/Mathf.Sin(alpha);
+        float r = A.re * Mathf.Sin(alpha*(1-t))/Mathf.Sin(alpha) + B.re * Mathf.Sin(alpha*t)/Mathf.Sin(alpha);
+        return new MyQuat(i, r);
+    }
+
     public static float Dot(MyQuat A, MyQuat B) {
         return A.re*B.re + Vector3.Dot(A.im, B.im);
     }
@@ -94,6 +101,23 @@ class DualQuaternion {
         D = D - MyQuat.Dot(P, D)*P;
         return new DualQuaternion(P, D);
     }
+
+    public static DualQuaternion Slerp(DualQuaternion A, DualQuaternion B, float t) {
+        if (MyQuat.Dot(A.p, B.p) < 0) {
+            B.p = -B.p;
+            B.d = -B.d;
+        }
+    
+        MyQuat P = MyQuat.Slerp(A.p, B.p, t);
+        MyQuat D = MyQuat.Slerp(A.d, B.d, t);
+
+        float len = Mathf.Sqrt(MyQuat.Dot(P, P));
+        P = P/len;
+        D = D/len;
+
+        D = D - MyQuat.Dot(P, D)*P;
+        return new DualQuaternion(P, D);
+    }
 }
 
 public class Interpolation : MonoBehaviour {
@@ -103,7 +127,8 @@ public class Interpolation : MonoBehaviour {
         AxisAngle,
         EulerAngles,
         Matrix,
-        DualQuaternions,
+        DualQuaternionsLerp,
+        DualQuaternionsSlerp,
     }
 
     [Header("Target objects")]
@@ -155,6 +180,31 @@ public class Interpolation : MonoBehaviour {
         return scale;
     }
 
+    // https://stackoverflow.com/questions/70462758/c-sharp-how-to-convert-quaternions-to-euler-angles-xyz
+    Vector3 ToEulerAngles(Quaternion q) {
+        Vector3 angles = new();
+
+        // roll
+        float sinr_cosp = 2 * (q.w * q.x + q.z * q.y);
+        float cosr_cosp = 1 - 2 * (q.x * q.x + q.z * q.z);
+        angles.x = Mathf.Atan2(sinr_cosp, cosr_cosp);
+
+        // pitch
+        float sinp = 2 * (q.w * q.z - q.y * q.x);
+        if (Mathf.Abs(sinp) >= 1) {
+            angles.z = sinp < 0 ? -Mathf.PI/2 : Mathf.PI/2;
+        } else {
+            angles.z = Mathf.Asin(sinp);
+        }
+
+        // yaw
+        float siny_cosp = 2 * (q.w * q.y + q.x * q.z);
+        float cosy_cosp = 1 - 2 * (q.z * q.z + q.y * q.y);
+        angles.y = Mathf.Atan2(siny_cosp, cosy_cosp);
+
+        return angles/Mathf.PI*180;
+    }
+
     void Update() {
         // just reset using A one in case was broken by a matrix interpolation
         transform.localScale = A.transform.localScale;
@@ -189,14 +239,16 @@ public class Interpolation : MonoBehaviour {
                 Vector3 axisA, axisB = Vector3.zero;
                 A.transform.rotation.ToAngleAxis(out angleA, out axisA);
                 B.transform.rotation.ToAngleAxis(out angleB, out axisB);
-                transform.rotation =  Quaternion.AngleAxis(angleA+t*Mathf.DeltaAngle(angleA, angleB), Vector3.Slerp(axisA, axisB, t));
+                transform.rotation = Quaternion.AngleAxis(angleA+t*Mathf.DeltaAngle(angleA, angleB), Vector3.Slerp(axisA, axisB, t));
                 break;
 
             case InterpolationType.EulerAngles:
-                float yaw = A.transform.eulerAngles.y + t*Mathf.DeltaAngle(A.transform.eulerAngles.y, B.transform.eulerAngles.y);
-                float pitch = A.transform.eulerAngles.x + t*Mathf.DeltaAngle(A.transform.eulerAngles.x, B.transform.eulerAngles.x);
-                float roll = A.transform.eulerAngles.z + t*Mathf.DeltaAngle(A.transform.eulerAngles.z, B.transform.eulerAngles.z);
-                transform.eulerAngles = new Vector3(pitch, yaw, roll);
+                Vector3 rotA = ToEulerAngles(A.transform.rotation);
+                Vector3 rotB = ToEulerAngles(B.transform.rotation);
+                float yaw = rotA.y + t*Mathf.DeltaAngle(rotA.y, rotB.y);
+                float pitch = rotA.z + t*Mathf.DeltaAngle(rotA.z, rotB.z);
+                float roll = rotA.x + t*Mathf.DeltaAngle(rotA.x, rotB.x);
+                transform.rotation = Quaternion.AngleAxis(roll, Vector3.right)*Quaternion.AngleAxis(pitch, Vector3.forward)*Quaternion.AngleAxis(yaw, Vector3.up);
                 break;
 
             case InterpolationType.Matrix:
@@ -220,12 +272,20 @@ public class Interpolation : MonoBehaviour {
                     transform.position = ExtractPosition(matrix);
                 break;
             
-            case InterpolationType.DualQuaternions:
+            case InterpolationType.DualQuaternionsLerp:
                 DualQuaternion DualA = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
                 DualQuaternion DualB = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
                 transform.rotation = DualQuaternion.Nlerp(DualA, DualB, t).rotation();
                 if (interpolateTranslation)
                     transform.position = DualQuaternion.Nlerp(DualA, DualB, t).translation();
+                break;
+            
+            case InterpolationType.DualQuaternionsSlerp:
+                DualQuaternion DualAS = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
+                DualQuaternion DualBS = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
+                transform.rotation = DualQuaternion.Slerp(DualAS, DualBS, t).rotation();
+                if (interpolateTranslation)
+                    transform.position = DualQuaternion.Slerp(DualAS, DualBS, t).translation();
                 break;
         }
     }
