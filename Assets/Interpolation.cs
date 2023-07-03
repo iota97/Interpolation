@@ -176,6 +176,7 @@ public class Interpolation : MonoBehaviour {
     void Update() {
         Material mat = transform.GetChild(0).GetChild(0).gameObject.GetComponent<Renderer>().sharedMaterial;
         mat.SetMatrix("_mat", Matrix4x4.identity);
+        mat.SetMatrix("_mat_inv", Matrix4x4.identity);
 
         if (animate) {
             t += (reverseAnim ? -1 : 1)*Time.deltaTime*speed;
@@ -241,7 +242,9 @@ public class Interpolation : MonoBehaviour {
                     matrix.SetColumn(3, new Vector4(transform.position.x, transform.position.y, transform.position.z, 1.0f));
                 }
 
-                mat.SetMatrix("_mat", matrix*transform.localToWorldMatrix.inverse);
+                matrix *= transform.localToWorldMatrix.inverse;
+                mat.SetMatrix("_mat", matrix);
+                mat.SetMatrix("_mat_inv", matrix.inverse);
                 break;
             
             case InterpolationType.DualQuaternionsNlerp:

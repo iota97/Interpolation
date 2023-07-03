@@ -26,6 +26,11 @@ Shader "Lit/Diffuse With Shadows"
                                     0.0, 0.0, 1.0, 0.0,
                                     0.0, 0.0, 0.0, 1.0);
 
+            float4x4 _mat_inv = float4x4(1.0, 0.0, 0.0, 0.0,
+                                    0.0, 1.0, 0.0, 0.0,
+                                    0.0, 0.0, 1.0, 0.0,
+                                    0.0, 0.0, 0.0, 1.0);
+
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -39,7 +44,7 @@ Shader "Lit/Diffuse With Shadows"
                 v2f o;
                 o.pos = mul(UNITY_MATRIX_VP, mul(_mat, mul(unity_ObjectToWorld, v.vertex)));
                 o.uv = v.texcoord;
-                half3 worldNormal = UnityObjectToWorldNormal(v.normal);
+                half3 worldNormal = normalize(mul(v.normal, (float3x3)mul(unity_WorldToObject, _mat_inv)));
                 half nl = max(0, dot(worldNormal, _WorldSpaceLightPos0.xyz));
                 o.diff = nl * _LightColor0.rgb;
                 o.ambient = ShadeSH9(half4(worldNormal,1));
@@ -63,7 +68,57 @@ Shader "Lit/Diffuse With Shadows"
             ENDCG
         }
 
-        // shadow casting support
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        Pass
+        {
+            Tags {"LightMode"="ShadowCaster"}
+
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_shadowcaster
+            #include "UnityCG.cginc"
+
+            struct v2f { 
+                V2F_SHADOW_CASTER;
+            };
+
+            float4x4 _mat = float4x4(1.0, 0.0, 0.0, 0.0,
+                                    0.0, 1.0, 0.0, 0.0,
+                                    0.0, 0.0, 1.0, 0.0,
+                                    0.0, 0.0, 0.0, 1.0);
+
+            float4x4 _mat_inv = float4x4(1.0, 0.0, 0.0, 0.0,
+                                    0.0, 1.0, 0.0, 0.0,
+                                    0.0, 0.0, 1.0, 0.0,
+                                    0.0, 0.0, 0.0, 1.0);
+
+            v2f vert(appdata_base v)
+            {
+                v2f o;
+                float4 wPos = mul(_mat, mul(unity_ObjectToWorld, v.vertex));
+
+                if (unity_LightShadowBias.z != 0.0)
+                {
+                    float3 wNormal = normalize(mul(v.normal, (float3x3)mul(unity_WorldToObject, _mat_inv)));
+                    float3 wLight = normalize(UnityWorldSpaceLightDir(wPos.xyz));
+
+                    float shadowCos = dot(wNormal, wLight);
+                    float shadowSine = sqrt(1-shadowCos*shadowCos);
+                    float normalBias = unity_LightShadowBias.z * shadowSine;
+
+                    wPos.xyz -= wNormal * normalBias;
+                }
+
+                o.pos = mul(UNITY_MATRIX_VP, wPos);
+                o.pos = UnityApplyLinearShadowBias(o.pos);
+                return o;
+            }
+
+            float4 frag(v2f i) : SV_Target
+            {
+                SHADOW_CASTER_FRAGMENT(i)
+            }
+            ENDCG
+        }
     }
 }
