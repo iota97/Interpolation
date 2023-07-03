@@ -720,8 +720,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   A: {fileID: 1844641017}
   B: {fileID: 1278146745}
-  interpolationType: 3
-  interpolateTranslation: 0
+  interpolationType: 0
+  interpolateTranslation: 1
   t: 0
   animate: 1
   speed: 0.5

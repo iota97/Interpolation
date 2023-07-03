@@ -127,8 +127,8 @@ public class Interpolation : MonoBehaviour {
         AxisAngle,
         EulerAngles,
         Matrix,
-        DualQuaternionsLerp,
         DualQuaternionsSlerp,
+        DualQuaternionsNlerp,
     }
 
     [Header("Target objects")]
@@ -146,39 +146,7 @@ public class Interpolation : MonoBehaviour {
     public bool animate = false;
     [Range(0.0f, 1.0f)]
     public float speed = 0.5f;
-
     bool reverseAnim = false;
-
-    // https://forum.unity.com/threads/how-to-assign-matrix4x4-to-transform.121966/
-    Quaternion ExtractRotation(Matrix4x4 matrix) {
-        Vector3 forward;
-        forward.x = matrix.m02;
-        forward.y = matrix.m12;
-        forward.z = matrix.m22;
- 
-        Vector3 upwards;
-        upwards.x = matrix.m01;
-        upwards.y = matrix.m11;
-        upwards.z = matrix.m21;
- 
-        return Quaternion.LookRotation(forward, upwards);
-    }
- 
-    Vector3 ExtractPosition(Matrix4x4 matrix) {
-        Vector3 position;
-        position.x = matrix.m03;
-        position.y = matrix.m13;
-        position.z = matrix.m23;
-        return position;
-    }
- 
-    Vector3 ExtractScale(Matrix4x4 matrix) {
-        Vector3 scale;
-        scale.x = new Vector4(matrix.m00, matrix.m10, matrix.m20, matrix.m30).magnitude;
-        scale.y = new Vector4(matrix.m01, matrix.m11, matrix.m21, matrix.m31).magnitude;
-        scale.z = new Vector4(matrix.m02, matrix.m12, matrix.m22, matrix.m32).magnitude;
-        return scale;
-    }
 
     // https://stackoverflow.com/questions/70462758/c-sharp-how-to-convert-quaternions-to-euler-angles-xyz
     Vector3 ToEulerAngles(Quaternion q) {
@@ -206,8 +174,8 @@ public class Interpolation : MonoBehaviour {
     }
 
     void Update() {
-        // just reset using A one in case was broken by a matrix interpolation
-        transform.localScale = A.transform.localScale;
+        Material mat = transform.GetChild(0).GetChild(0).gameObject.GetComponent<Renderer>().sharedMaterial;
+        mat.SetMatrix("_mat", Matrix4x4.identity);
 
         if (animate) {
             t += (reverseAnim ? -1 : 1)*Time.deltaTime*speed;
@@ -239,6 +207,10 @@ public class Interpolation : MonoBehaviour {
                 Vector3 axisA, axisB = Vector3.zero;
                 A.transform.rotation.ToAngleAxis(out angleA, out axisA);
                 B.transform.rotation.ToAngleAxis(out angleB, out axisB);
+                if (Vector3.Dot(axisA, axisB) < 0) {
+                    angleB *= -1;
+                    axisB *= -1;
+                }
                 transform.rotation = Quaternion.AngleAxis(angleA+t*Mathf.DeltaAngle(angleA, angleB), Vector3.Slerp(axisA, axisB, t));
                 break;
 
@@ -265,14 +237,14 @@ public class Interpolation : MonoBehaviour {
                 matrix.SetColumn(1, Vector4.Lerp(MatA.GetColumn(1), MatB.GetColumn(1), t));
                 matrix.SetColumn(2, Vector4.Lerp(MatA.GetColumn(2), MatB.GetColumn(2), t));
                 matrix.SetColumn(3, Vector4.Lerp(MatA.GetColumn(3), MatB.GetColumn(3), t));
+                if (!interpolateTranslation) {
+                    matrix.SetColumn(3, new Vector4(transform.position.x, transform.position.y, transform.position.z, 1.0f));
+                }
 
-                transform.localScale = ExtractScale(matrix);
-                transform.rotation = ExtractRotation(matrix);
-                if (interpolateTranslation)
-                    transform.position = ExtractPosition(matrix);
+                mat.SetMatrix("_mat", matrix*transform.localToWorldMatrix.inverse);
                 break;
             
-            case InterpolationType.DualQuaternionsLerp:
+            case InterpolationType.DualQuaternionsNlerp:
                 DualQuaternion DualA = DualQuaternion.FromTranslation(A.transform.position)*DualQuaternion.FromRotation(A.transform.rotation);
                 DualQuaternion DualB = DualQuaternion.FromTranslation(B.transform.position)*DualQuaternion.FromRotation(B.transform.rotation);
                 transform.rotation = DualQuaternion.Nlerp(DualA, DualB, t).rotation();

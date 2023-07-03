@@ -5,7 +5,8 @@ Unity project to test interpolation of rototranslation expressed with different 
 - Quaternion Slerp
 - Quaternion Nlerp
 - Axis (slerp) + angle (linear)
-- Matrix (approximation as Unity don't make it easy to set the Model matrix)
-- Dual quaternion
+- Matrix
+- Dual quaternion Slerp
+- Dual quaternion Nlerp
 
 Except for dual quaternion translation is lerped.
