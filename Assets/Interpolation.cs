@@ -126,6 +126,7 @@ public class Interpolation : MonoBehaviour {
     public enum InterpolationType {
         QuaternionSlerp,
         QuaternionSlerpTraslorotation,
+        QuaternionSlerpTraslorotationOriginFix,
         QuaternionNlerp,
         AxisAndAngle,
         EulerAngles,
@@ -214,6 +215,17 @@ public class Interpolation : MonoBehaviour {
                     Vector3 posA = Quaternion.Inverse(A.transform.rotation)*A.transform.position;
                     Vector3 posB = Quaternion.Inverse(B.transform.rotation)*B.transform.position;
                     transform.position = transform.rotation*Vector3.Lerp(posA, posB, t);
+                }
+                break;
+            }
+
+            case InterpolationType.QuaternionSlerpTraslorotationOriginFix: {
+                transform.rotation = Quaternion.Slerp(A.transform.rotation, B.transform.rotation, t);
+                if (interpolateTranslation) {
+                    Vector3 newOrigin = Vector3.Lerp(A.transform.position, B.transform.position, 0.5f);
+                    Vector3 posA = Quaternion.Inverse(A.transform.rotation)*(A.transform.position - newOrigin);
+                    Vector3 posB = Quaternion.Inverse(B.transform.rotation)*(B.transform.position - newOrigin);
+                    transform.position = transform.rotation*Vector3.Lerp(posA, posB, t) + newOrigin;
                 }
                 break;
             }
