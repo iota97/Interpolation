@@ -125,6 +125,7 @@ class DualQuaternion {
 public class Interpolation : MonoBehaviour {
     public enum InterpolationType {
         QuaternionSlerp,
+        QuaternionSlerpTraslorotation,
         QuaternionNlerp,
         AxisAndAngle,
         EulerAngles,
@@ -204,6 +205,16 @@ public class Interpolation : MonoBehaviour {
 
             case InterpolationType.QuaternionNlerp: {
                 transform.rotation = Quaternion.Lerp(A.transform.rotation, B.transform.rotation, t);
+                break;
+            }
+
+            case InterpolationType.QuaternionSlerpTraslorotation: {
+                transform.rotation = Quaternion.Slerp(A.transform.rotation, B.transform.rotation, t);
+                if (interpolateTranslation) {
+                    Vector3 posA = Quaternion.Inverse(A.transform.rotation)*A.transform.position;
+                    Vector3 posB = Quaternion.Inverse(B.transform.rotation)*B.transform.position;
+                    transform.position = transform.rotation*Vector3.Lerp(posA, posB, t);
+                }
                 break;
             }
                 
